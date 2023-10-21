@@ -2,7 +2,6 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Random;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.FutureTask;
@@ -11,24 +10,27 @@ import java.util.function.Function;
 public class Server {
     private static Random random = new Random();
     private static int ATTEMPTS = 5;
-    private static String exception_message = "";
 
-    public static Double InspectFunction(Function<Double, Double> func, Double x) throws Exception {
-        Double res = 0.0;
+    public static Double InspectFunction(Function<Double, Double> function_to_execute, Double x, int client_port)
+            throws Exception {
+        if (x <= 0 || x >= 1000000)
+            throw new Exception("Critical error!!!(x must be greater than zero, but less than 1000000)");
+        Double function_result = 0.0;
 
         int current_attempt = 0;
         while (current_attempt < ATTEMPTS) {
-            res = func.apply(x);
-            if (res != 0.0)
+            function_result = function_to_execute.apply(x);
+            if (function_result != 0.0)
                 break;
             else
-                System.out.println("Non breaking error.Time limit exceeded in one of the methods.");
+                System.out.println(String.format(
+                        "Non breaking error for client %d. Time limit exceeded in one of the methods.", client_port));
             current_attempt++;
         }
-        if (res == 0.0) {
-            throw new Exception("Time limit exceeded in each attempt in one or both methods");
+        if (function_result == 0.0) {
+            throw new Exception("Critical error!. Time limit exceeded in each attempt in one or both methods");
         } else {
-            return res;
+            return function_result;
         }
 
     }
@@ -52,7 +54,7 @@ public class Server {
 
     public static Double g(Double x) {
         long start = System.currentTimeMillis();
-        long end = start + 2000;
+        long end = start + 1700;
         while (System.currentTimeMillis() < end) {
             x += random.nextDouble(10000);
             try {
@@ -66,83 +68,144 @@ public class Server {
         return 0.0;
     }
 
-    public static int port = 8080;
+    public static void main(String[] args) {
 
-    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException, Exception {
-        System.out.println("Server is ready for connections");
+        int port = 8888;
+        try {
+            ServerSocket serverSocket = new ServerSocket(port);
 
-        ServerSocket serverSocket = new ServerSocket(port);
-        while (true) {
-            exception_message = "";
-            Socket clientSocket = serverSocket.accept();
-            System.out.println("Client connected from " + clientSocket.getPort() + " port");
+            // opening a server socket to accept connections
+            System.out.println("Server is ready for connections");
+            long start = System.currentTimeMillis();
+            long end = start + 600000;
 
-            InputStream input_from_client = clientSocket.getInputStream();
-            OutputStream output_from_server = clientSocket.getOutputStream();
-            BufferedReader input = new BufferedReader(new InputStreamReader(input_from_client));
+            while (System.currentTimeMillis() < end) { // server socket may accept connections only for 10 minutes,then
+                                                       // you
+                                                       // must reload it
+                String exception_message = "";
 
-            String input_value = input.readLine();
-            Double x = Double.valueOf(input_value);
-            System.out.println("Client with port " + clientSocket.getPort() + " entered number:" + x);
-            // FutureTask<Double> first = new FutureTask<Double>(() -> InspectFunction((arg)
-            // -> f(arg), x));
-            // FutureTask<Double> second = new FutureTask<Double>(() ->
-            // InspectFunction((arg) -> g(arg), x));
-
-            FutureTask<Double> third = new FutureTask<Double>(() -> {
+                Socket clientSocket = serverSocket.accept(); // getting client's socket that connected to server
                 try {
-                    return InspectFunction((arg) -> f(arg), x);
-                } catch (Exception e) {
-                    exception_message = e.getMessage();
-                    return 0.0;
-                }
-            });
+                    System.out.println("Client connected from " + clientSocket.getPort() + " port");
 
-            FutureTask<Double> fourth = new FutureTask<Double>(() -> {
-                try {
-                    return InspectFunction((arg) -> g(arg), x);
-                } catch (Exception e) {
-                    exception_message = e.getMessage();
-                    return 0.0;
-                }
-            });
-            ExecutorService executor = Executors.newFixedThreadPool(2);
+                    InputStream input_from_client = clientSocket.getInputStream(); // getting input and output stream
+                                                                                   // for
+                                                                                   // client's socket to inform it about
+                                                                                   // the
+                                                                                   // results and to accept the
+                                                                                   // parameter
+                    OutputStream output_from_server = clientSocket.getOutputStream();
+                    BufferedReader input = new BufferedReader(new InputStreamReader(input_from_client));
 
-            executor.execute(third);
-            executor.execute(fourth);
-            Double res1 = 0.0;
-            Double res2 = 0.0;
-            while (true) {
+                    String input_value = input.readLine(); // getting a parameter for functions from client
+                    Double x = Double.valueOf(input_value);
 
-                if (third.isDone() && res1 == 0.0) {
-                    try {
-                        res1 = third.get();
-                        System.out.println("f returned " + res1);
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
+                    System.out.println("Client with port " + clientSocket.getPort() + " entered number:" + x); // making
+                                                                                                               // sure
+                                                                                                               // what
+                                                                                                               // value
+                                                                                                               // the
+                                                                                                               // client
+                                                                                                               // entered
+                                                                                                               // from a
+                                                                                                               // specific
+                                                                                                               // port
+
+                    FutureTask<Double> first_task = new FutureTask<Double>(
+                            () -> InspectFunction((arg) -> f(arg), x, clientSocket.getPort())); // creating
+                    // FutureTasks
+                    // that
+                    // will
+                    // execute
+                    // InspectFunction
+                    // for
+                    // f
+                    // and
+                    // g
+                    // using
+                    // x
+                    // parameter
+
+                    FutureTask<Double> second_task = new FutureTask<Double>(
+                            () -> InspectFunction((arg) -> g(arg), x, clientSocket.getPort()));
+
+                    ExecutorService executor = Executors.newFixedThreadPool(2); // creating executor with ThreadPool
+                                                                                // size of
+                                                                                // 2,
+                                                                                // to execute our FutureTasks
+                                                                                // asynchronously
+                                                                                // in
+                                                                                // two different threads
+
+                    executor.execute(first_task); // starting executing future's
+                    executor.execute(second_task);
+
+                    Double resf = 0.0;
+                    Double resg = 0.0;
+                    while (true) { // cycle which checks if any of two futures is completed, and if it is, printing
+                                   // its result on server
+                        if (first_task.isDone() && resf == 0.0) { // condition to check if first_task is done and we
+                                                                  // still
+                                                                  // don't
+                                                                  // have a result
+                            try {
+
+                                resf = first_task.get();
+                                System.out.println("f returned " + resf);
+                            } catch (Exception e) { // if we got critical error in this task(which executes function f)
+                                                    // we
+                                                    // get
+                                                    // its exception message
+                                // and cancel another task, because wait its result is useless
+
+                                exception_message = e.getMessage();
+                                second_task.cancel(true);
+                                break;
+                            }
+                        }
+                        // same logic as with the first task
+                        if (second_task.isDone() && resg == 0.0) {
+                            try {
+                                resg = second_task.get();
+                                System.out.println("g returned " + resg);
+                            } catch (Exception e) {
+                                exception_message = e.getMessage();
+                                first_task.cancel(true);
+                                break;
+                            }
+                        }
+                        if (first_task.isDone() && second_task.isDone())
+                            break;
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException exception) {
+                            exception.printStackTrace();
+                        }
                     }
-                }
-
-                if (fourth.isDone() && res2 == 0.0) {
-                    try {
-                        res2 = fourth.get();
-                        System.out.println("g returned " + res2);
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
+                    double result = resf + resg;
+                    String output_for_user = "Function f=" + resf + ",Function g=" + resg + "\nSum of results="
+                            + result;
+                    if (exception_message == "") {
+                        output_from_server.write(output_for_user.getBytes());
+                        System.out.println("Functions completed succesfully for client " + clientSocket.getPort());
+                    } else {
+                        output_from_server.write(exception_message.getBytes());
+                        System.out.println(
+                                "Critical error for client " + clientSocket.getPort() + ":" + exception_message);
                     }
+                } catch (IOException exception) {
+                    System.out.println(
+                            "Error during sending info to/reading info from client.Probably, client disconnected.");
+                    clientSocket.close();
                 }
-                if (third.isDone() && fourth.isDone())
-                    break;
-                Thread.sleep(100);
-            }
 
-            if (exception_message == "") {
-                String answer = "Value of f function:" + res1 + ", value of g function:" + res2 + ";\n Sum = "
-                        + (res1 + res2);
-                output_from_server.write(answer.getBytes());
             }
+            serverSocket.close();
+        } catch (IOException | NumberFormatException exception) {
+            System.out.println("Can not start server.Please try to reload it.");
 
         }
+
     }
 
 }
