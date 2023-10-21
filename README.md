@@ -6,7 +6,7 @@ Operating system laboratory №1(resource manager)
 Засіб комунікації: сокет
 
 
-Спосіб комунікації:future/executors/async
+Спосіб синхронізації:future/executors/async
 
 
 Носій обчислення:потік
