@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -112,7 +113,7 @@ public class Server {
                                                                                                                // port
 
                     FutureTask<Double> first_task = new FutureTask<Double>(
-                            () -> InspectFunction((arg) -> f(arg), x, clientSocket.getPort())); // creating
+                            () -> InspectFunction(Server::f, x, clientSocket.getPort())); // creating
                     // FutureTasks
                     // that
                     // will
@@ -127,7 +128,7 @@ public class Server {
                     // parameter
 
                     FutureTask<Double> second_task = new FutureTask<Double>(
-                            () -> InspectFunction((arg) -> g(arg), x, clientSocket.getPort()));
+                            () -> InspectFunction(Server::g, x, clientSocket.getPort()));
 
                     ExecutorService executor = Executors.newFixedThreadPool(2); // creating executor with ThreadPool
                                                                                 // size of
@@ -144,7 +145,7 @@ public class Server {
                     Double resg = 0.0;
                     while (true) { // cycle which checks if any of two futures is completed, and if it is, printing
                                    // its result on server
-                        if (first_task.isDone() && resf == 0.0) { // condition to check if first_task is done and we
+                        if (first_task.isDone() && resf == 0.0) { // condition to check if first_task is done, and we
                                                                   // still
                                                                   // don't
                                                                   // have a result
@@ -185,7 +186,7 @@ public class Server {
                     double result = resf + resg;
                     String output_for_user = "Function f=" + resf + ",Function g=" + resg + "\nSum of results="
                             + result;
-                    if (exception_message == "") {
+                    if (Objects.equals(exception_message, "")) {
                         output_from_server.write(output_for_user.getBytes());
                         System.out.println("Functions completed succesfully for client " + clientSocket.getPort());
                     } else {
