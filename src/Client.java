@@ -37,7 +37,7 @@ public class Client {
                 System.out.println("You entered not a number.Closing your socket...");
                 clientsocket.close();
             } catch (SocketException exception) {
-                System.out.println("Connection with server socket is not available anymore");
+                System.out.println("Connection with server socket is not available anymore.Closing your socket...");
                 clientsocket.close();
             }
         } catch (ConnectException exception) {
