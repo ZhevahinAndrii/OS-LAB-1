@@ -6,6 +6,7 @@ import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class Client {
@@ -30,7 +31,8 @@ public class Client {
                 output.write(x.getBytes());
 
                 char[] answer = new char[1024];
-                input.read(answer);
+                int read = input.read(answer);
+                answer = Arrays.copyOfRange(answer,0,read);
                 String message = new String(answer);
                 System.out.println(message);
             } catch (NumberFormatException exception) {

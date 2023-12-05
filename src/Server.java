@@ -9,8 +9,8 @@ import java.util.concurrent.FutureTask;
 import java.util.function.Function;
 
 public class Server {
-    private static Random random = new Random();
-    private static int ATTEMPTS = 5;
+    private static final Random random = new Random();
+    private static final int ATTEMPTS = 5;
 
     public static Double InspectFunction(Function<Double, Double> function_to_execute, Double x, int client_port)
             throws Exception {
@@ -24,8 +24,8 @@ public class Server {
             if (function_result != 0.0)
                 break;
             else
-                System.out.println(String.format(
-                        "Non breaking error for client %d. Time limit exceeded in one of the methods.", client_port));
+                System.out.printf(
+                        "Non breaking error for client %d. Time limit exceeded in one of the methods.%n", client_port);
             current_attempt++;
         }
         if (function_result == 0.0) {
@@ -83,6 +83,7 @@ public class Server {
             while (System.currentTimeMillis() < end) { // server socket may accept connections only for 10 minutes,then
                                                        // you
                                                        // must reload it
+
                 String exception_message = "";
 
                 Socket clientSocket = serverSocket.accept(); // getting client's socket that connected to server
@@ -112,7 +113,7 @@ public class Server {
                                                                                                                // specific
                                                                                                                // port
 
-                    FutureTask<Double> first_task = new FutureTask<Double>(
+                    FutureTask<Double> first_task = new FutureTask<>(
                             () -> InspectFunction(Server::f, x, clientSocket.getPort())); // creating
                     // FutureTasks
                     // that
@@ -127,7 +128,7 @@ public class Server {
                     // x
                     // parameter
 
-                    FutureTask<Double> second_task = new FutureTask<Double>(
+                    FutureTask<Double> second_task = new FutureTask<>(
                             () -> InspectFunction(Server::g, x, clientSocket.getPort()));
 
                     ExecutorService executor = Executors.newFixedThreadPool(2); // creating executor with ThreadPool
@@ -138,7 +139,7 @@ public class Server {
                                                                                 // in
                                                                                 // two different threads
 
-                    executor.execute(first_task); // starting executing future's
+                    executor.execute(first_task); // starting executing futures
                     executor.execute(second_task);
 
                     Double resf = 0.0;
@@ -147,8 +148,7 @@ public class Server {
                                    // its result on server
                         if (first_task.isDone() && resf == 0.0) { // condition to check if first_task is done, and we
                                                                   // still
-                                                                  // don't
-                                                                  // have a result
+                                                                  // don't have a result
                             try {
 
                                 resf = first_task.get();
@@ -180,20 +180,22 @@ public class Server {
                         try {
                             Thread.sleep(100);
                         } catch (InterruptedException exception) {
-                            exception.printStackTrace();
+                            System.out.println("Thread was interrupted");
                         }
                     }
+                    executor.close();
                     double result = resf + resg;
                     String output_for_user = "Function f=" + resf + ",Function g=" + resg + "\nSum of results="
                             + result;
                     if (Objects.equals(exception_message, "")) {
                         output_from_server.write(output_for_user.getBytes());
-                        System.out.println("Functions completed succesfully for client " + clientSocket.getPort());
+                        System.out.println("Functions completed successfully for client " + clientSocket.getPort());
                     } else {
                         output_from_server.write(exception_message.getBytes());
                         System.out.println(
                                 "Critical error for client " + clientSocket.getPort() + ":" + exception_message);
                     }
+                    clientSocket.close();
                 } catch (IOException exception) {
                     System.out.println(
                             "Error during sending info to/reading info from client.Probably, client disconnected.");
