@@ -35,6 +35,17 @@ public class Client {
                 answer = Arrays.copyOfRange(answer,0,read);
                 String message = new String(answer);
                 System.out.println(message);
+                if(message.contains("error")){
+                    System.out.println("Cause of error, please enter x again(retry):");
+                    x = scanner.nextLine()+"\n";
+                    Double.valueOf(x);
+                    output.write(x.getBytes());
+
+                    read = input.read(answer);
+                    answer = Arrays.copyOfRange(answer,0,read);
+                    message = new String(answer);
+                    System.out.println(message);
+                }
             } catch (NumberFormatException exception) {
                 System.out.println("You entered not a number.Closing your socket...");
                 clientsocket.close();

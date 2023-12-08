@@ -138,7 +138,6 @@ public class Server {
                                                                                 // asynchronously
                                                                                 // in
                                                                                 // two different threads
-
                     executor.execute(first_task); // starting executing futures
                     executor.execute(second_task);
 
@@ -183,6 +182,7 @@ public class Server {
                             System.out.println("Thread was interrupted");
                         }
                     }
+                    executor.shutdown();
                     executor.close();
                     double result = resf + resg;
                     String output_for_user = "Function f=" + resf + ",Function g=" + resg + "\nSum of results="
